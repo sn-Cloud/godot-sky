@@ -56,7 +56,11 @@ impl QuestSkyNative {
     fn calculate_sun_direction(&self, minutes: f64) -> Vector3 {
         let radians = self.azimuth_offset_degrees.to_radians();
         let direction = math::sun_direction(minutes, radians);
-        Vector3::new(direction[0] as f32, direction[1] as f32, direction[2] as f32)
+        Vector3::new(
+            direction[0] as f32,
+            direction[1] as f32,
+            direction[2] as f32,
+        )
     }
 
     #[func]
