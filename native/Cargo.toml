@@ -1,0 +1,12 @@
+[package]
+name = "quest_sky_native"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+godot = { version = "0.5.2", features = ["api-4-6"] }
