@@ -16,3 +16,25 @@ jobs:
         run: cargo test --workspace
       - name: Check release
         run: cargo check --workspace --release
+
+  godot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.6.3
+        run: |
+          curl --fail --location --output godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          mv Godot_v4.6.3-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: Import project
+        run: |
+          set -o pipefail
+          ./godot --headless --editor --path . --quit 2>&1 | tee godot-import.log
+          ! grep -E "SCRIPT ERROR|SHADER ERROR|ERROR:" godot-import.log
+      - name: Run demo smoke test
+        run: |
+          set -o pipefail
+          ./godot --headless --path . --quit-after 3 2>&1 | tee godot-demo.log
+          ! grep -E "SCRIPT ERROR|SHADER ERROR|ERROR:" godot-demo.log
