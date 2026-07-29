@@ -16,13 +16,13 @@ extends Node3D
 @export_range(0.0, 2.0, 0.01) var night_ambient_energy := 0.12
 @export_range(0.0, 2.0, 0.01) var day_ambient_energy := 0.72
 
-const KEYFRAME_MINUTES := PackedInt32Array([0, 360, 720, 1080])
-const SKY_TEXTURE_PATHS := PackedStringArray([
+const KEYFRAME_MINUTES = [0, 360, 720, 1080]
+const SKY_TEXTURE_PATHS = [
     "res://addons/quest_sky/assets/sky/sky_00.svg",
     "res://addons/quest_sky/assets/sky/sky_06.svg",
     "res://addons/quest_sky/assets/sky/sky_12.svg",
     "res://addons/quest_sky/assets/sky/sky_18.svg"
-])
+]
 
 @onready var sky_mesh: MeshInstance3D = $SkyMesh
 @onready var sun_light: DirectionalLight3D = $SunLight
