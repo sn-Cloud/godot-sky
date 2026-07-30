@@ -1,9 +1,9 @@
 name: Build Quest APK
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/initial-quest-sky
+      - main
 
 permissions:
   contents: read
