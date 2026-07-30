@@ -70,25 +70,33 @@ jobs:
           presets_to_export: Quest 3 Debug
           use_preset_export_path: true
           verbose: true
-      - name: Verify APK
+      - name: Locate APK
+        id: apk
         run: |
-          test -f build/quest-sky-debug.apk
+          APK_PATH="$(find build -type f -name '*.apk' | head -n 1)"
+          test -n "$APK_PATH"
+          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
+          ls -lh "$APK_PATH"
+      - name: Verify APK
+        env:
+          APK_PATH: ${{ steps.apk.outputs.path }}
+        run: |
           python3 - <<'PY'
+          import os
           from pathlib import Path
           from zipfile import ZipFile
 
-          apk = Path("build/quest-sky-debug.apk")
+          apk = Path(os.environ["APK_PATH"])
           target = "lib/arm64-v8a/libquest_sky_native.so"
           with ZipFile(apk) as archive:
               matches = [name for name in archive.namelist() if name == target]
           if len(matches) != 1:
               raise SystemExit(f"Expected exactly one {target}, found {len(matches)}")
-          print(f"Verified {target}")
+          print(f"Verified {target} in {apk}")
           PY
-          ls -lh build/quest-sky-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: quest-sky-debug-apk
-          path: build/quest-sky-debug.apk
+          path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 14
