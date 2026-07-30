@@ -1,8 +1,7 @@
-# Sky texture format
+# 天空关键帧资源
 
-The runtime uses a 2D octahedral direction map instead of equirectangular projection,
-so the shader avoids per-pixel `atan` and `asin` operations.
+`sky_00.svg` 至 `sky_23.svg` 分别对应全天每个整点。资源使用 1024×1024 八面体映射布局，由 Shader 在当前与下一关键帧之间插值。
 
-The four SVG files are lightweight placeholder assets for validating the renderer and
-24-hour blending. Production assets will use denser keyframes and ASTC-compressed
-raster textures after the visual direction is approved.
+运行时不会同时加载全部资源，只保留两张活动贴图。替换资源时保持文件名和尺寸即可；太阳与月亮不要烘焙进贴图，它们由 Shader 独立绘制和移动。
+
+`sky_timeline.json` 保存每个关键帧的环境光、太阳颜色和能量。可在不修改代码的情况下调整全天美术曲线。
