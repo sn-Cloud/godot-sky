@@ -29,8 +29,12 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo test --workspace
-      - name: Build Rust GDExtension for arm64
+      - name: Build host and Android GDExtension libraries
         run: |
+          mkdir -p godot/bin
+          cargo build --release -p quest_sky_native
+          cp target/release/libquest_sky_native.so godot/bin/libquest_sky_native.linux.release.x86_64.so
+          cp target/release/libquest_sky_native.so godot/bin/libquest_sky_native.linux.debug.x86_64.so
           cargo install cargo-ndk --locked
           cargo ndk -t arm64-v8a -o godot/bin build --release -p quest_sky_native
           NATIVE_LIB="$(find godot/bin -name libquest_sky_native.so | head -n 1)"
