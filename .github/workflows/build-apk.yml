@@ -52,16 +52,12 @@ jobs:
           cargo test --workspace
       - name: Build host and Android GDExtension libraries
         run: |
-          mkdir -p godot/bin
+          mkdir -p godot/bin/linux godot/bin/android
           cargo build --release -p quest_sky_native
-          cp target/release/libquest_sky_native.so godot/bin/libquest_sky_native.linux.release.x86_64.so
-          cp target/release/libquest_sky_native.so godot/bin/libquest_sky_native.linux.debug.x86_64.so
+          cp target/release/libquest_sky_native.so godot/bin/linux/libquest_sky_native.so
           cargo install cargo-ndk --locked
-          cargo ndk -t arm64-v8a -o godot/bin build --release -p quest_sky_native
-          NATIVE_LIB="$(find godot/bin -name libquest_sky_native.so | head -n 1)"
-          test -n "$NATIVE_LIB"
-          cp "$NATIVE_LIB" godot/bin/libquest_sky_native.android.release.arm64.so
-          cp "$NATIVE_LIB" godot/bin/libquest_sky_native.android.debug.arm64.so
+          cargo ndk -t arm64-v8a -o godot/bin/android build --release -p quest_sky_native
+          test -f godot/bin/android/arm64-v8a/libquest_sky_native.so
           cp godot/quest_sky.gdextension.template godot/quest_sky.gdextension
       - name: Export Quest debug APK
         id: export
@@ -77,7 +73,7 @@ jobs:
       - name: Verify APK
         run: |
           test -f build/quest-sky-debug.apk
-          unzip -l build/quest-sky-debug.apk | grep -q "lib/arm64-v8a/libquest_sky_native"
+          unzip -l build/quest-sky-debug.apk | grep -q "lib/arm64-v8a/libquest_sky_native.so"
           ls -lh build/quest-sky-debug.apk
       - uses: actions/upload-artifact@v4
         with:
