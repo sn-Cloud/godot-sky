@@ -1,52 +1,39 @@
 # Godot Sky
 
-面向 Meta Quest 3 独立运行的超轻量 24 小时天空系统。
+面向 Meta Quest 3 独立运行的超轻量 24 小时天空插件。核心目标是以贴图关键帧替代实时大气、云和星空计算，只让太阳、月亮和灯光以每分钟一次的频率更新。
 
-## 当前实现
+## 设计
 
-- 天空、云、星星全部烘焙进 4 张八面体映射占位贴图；
-- 每六小时一个占位关键帧，运行时仅混合当前和下一张贴图；
-- 默认每 60 秒更新一次贴图混合比例、太阳、月亮、方向光和环境光；
-- 太阳、月亮使用解析圆盘，不做大气散射或额外纹理采样；
-- 不使用体积云、FBM、Ray March、屏幕空间雾或动态 Radiance Cubemap；
-- 天空立方体在 Shader 中移除相机平移，不需要每帧 CPU 跟随；
-- Godot 4.6 Mobile Renderer；
-- 包含 Rust GDExtension 数学/控制核心和可立即运行的 GDScript 参考控制器。
+- 24 张每小时关键帧天空贴图，运行时仅保留当前与下一张。
+- 每分钟更新贴图混合比例、太阳、月亮、方向光和环境光。
+- 单个倒置天空盒 Draw Call。
+- 每像素两次天空贴图采样；太阳和月亮使用解析圆盘。
+- 无体积云、FBM、Ray March、屏幕空间雾和动态 Radiance Cubemap。
+- Quest 使用 Godot 4.6 Compatibility 渲染器和 OpenXR。
+- Rust GDExtension 提供原生时间/方向数学；没有原生库时自动使用 GDScript 后备实现。
 
-## 性能模型
+## 目录
 
-天空主体每像素约为：
+- `addons/quest_sky/`：可复制到其他 Godot 项目的插件。
+- `demo/demo.tscn`：桌面时间预览。
+- `demo/xr_demo.tscn`：OpenXR/Quest 场景。
+- `native/`：Rust GDExtension。
+- `export_presets.cfg`：Quest 3 ARM64 Debug APK 预设。
+- `.github/workflows/build-apk.yml`：手动构建并上传测试 APK。
 
-- 两次 2D 贴图采样；
-- 一次贴图插值；
-- 八面体方向映射；
-- 太阳、月亮各一个点积和 `smoothstep`。
+## 使用
 
-CPU 默认每分钟更新一次，不存在每帧天空逻辑。
+1. 将 `addons/quest_sky` 复制到项目。
+2. 启用 `Quest Sky` 编辑器插件。
+3. 实例化 `addons/quest_sky/quest_sky.tscn`。
+4. 默认同步设备真实时间；测试时设置 `sync_system_clock=false` 并修改 `manual_time_minutes`。
+5. 替换 `addons/quest_sky/assets/sky/sky_00.svg` 至 `sky_23.svg` 可更换全天视觉风格。
 
-## 运行演示
+## 构建测试 APK
 
-1. 使用 Godot 4.6.x 打开仓库根目录。
-2. 运行 `demo/demo.tscn`。
-3. 拖动左上角滑块查看完整 24 小时变化。
+在 GitHub 仓库的 **Actions → Build Quest APK → Run workflow** 手动执行。成功后从 `quest-sky-debug-apk` Artifact 下载 APK。工作流不会因普通提交自动运行，因此不会持续发送测试失败邮件。
 
-## 集成
-
-将 `addons/quest_sky` 复制到目标项目，然后实例化：
-
-```text
-res://addons/quest_sky/quest_sky.tscn
-```
-
-默认使用系统本地时间。测试时可关闭 `sync_system_clock` 并设置 `manual_time_minutes`。
-
-## 资源约定
-
-当前 256×256 图片是自动生成的占位资源，用于验证渲染路径、切换逻辑和性能。最终版本将替换为美术质量贴图，并保留完全相同的运行时架构。
-
-## Rust
-
-当前 godot-rust 依赖固定为 `0.5.2`，API 目标为 Godot 4.6。Android ARM64说明见 `docs/ANDROID.md`。
+本地 Android/Rust 构建见 [docs/ANDROID.md](docs/ANDROID.md)。
 
 ## License
 
