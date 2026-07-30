@@ -1,20 +1,27 @@
 ; Engine configuration file.
-; Quest Sky targets Godot 4.6 and the Mobile renderer.
+; Quest Sky targets Godot 4.6 and the Compatibility renderer for standalone XR.
 config_version=5
 
 [application]
 config/name="Quest Sky"
-run/main_scene="res://demo/demo.tscn"
+config/version="0.2.0"
+run/main_scene="res://demo/launcher.tscn"
+config/icon="res://icon.svg"
 
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
+window/handheld/orientation=1
 
 [rendering]
-renderer/rendering_method="mobile"
-renderer/rendering_method.mobile="mobile"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
+
+[xr]
+openxr/enabled=true
+shaders/enabled=true
 
 [editor_plugins]
 enabled=PackedStringArray("res://addons/quest_sky/plugin.cfg")
