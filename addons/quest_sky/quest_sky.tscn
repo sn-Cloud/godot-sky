@@ -1,0 +1,41 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://addons/quest_sky/runtime/quest_sky_controller.gd" id="1_controller"]
+[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky.gdshader" id="2_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+render_priority = -127
+shader = ExtResource("2_shader")
+
+[sub_resource type="BoxMesh" id="BoxMesh_sky"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="Environment" id="Environment_sky"]
+background_mode = 1
+background_color = Color(0.01, 0.01, 0.02, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.04, 0.05, 0.08, 1)
+ambient_light_energy = 0.2
+reflected_light_source = 1
+
+[node name="QuestSky" type="Node3D"]
+script = ExtResource("1_controller")
+
+[node name="SkyMesh" type="MeshInstance3D" parent="."]
+material_override = SubResource("ShaderMaterial_sky")
+mesh = SubResource("BoxMesh_sky")
+cast_shadow = 0
+extra_cull_margin = 16384.0
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+light_color = Color(1, 0.95, 0.88, 1)
+light_energy = 1.0
+shadow_enabled = true
+directional_shadow_max_distance = 30.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_sky")
+
+[node name="UpdateTimer" type="Timer" parent="."]
+wait_time = 60.0
+one_shot = false

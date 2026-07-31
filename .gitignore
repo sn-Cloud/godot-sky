@@ -1,0 +1,9 @@
+.godot/
+target/
+native/target/
+bin/*.dll
+bin/*.so
+bin/*.dylib
+*.apk
+*.aab
+.DS_Store

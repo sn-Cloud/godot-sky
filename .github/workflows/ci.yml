@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Test
+        run: cargo test --workspace
+      - name: Check release
+        run: cargo check --workspace --release
+
+  godot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download Godot 4.6.3
+        run: |
+          curl --fail --location --output godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q godot.zip -d godot-dist
+          GODOT_SOURCE="$(find godot-dist -type f -name 'Godot*' | head -n 1)"
+          test -n "$GODOT_SOURCE"
+          cp "$GODOT_SOURCE" godot-bin
+          chmod +x godot-bin
+      - name: Import project
+        run: |
+          set -o pipefail
+          ./godot-bin --headless --xr-mode off --editor --path . --quit 2>&1 | tee godot-import.log
+          ! grep -E "SCRIPT ERROR|SHADER ERROR|ERROR:" godot-import.log
+      - name: Run desktop demo smoke test
+        run: |
+          set -o pipefail
+          ./godot-bin --headless --xr-mode off --path . res://demo/demo.tscn --quit-after 3 2>&1 | tee godot-demo.log
+          ! grep -E "SCRIPT ERROR|SHADER ERROR|ERROR:" godot-demo.log

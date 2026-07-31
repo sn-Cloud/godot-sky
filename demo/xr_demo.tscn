@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="PackedScene" path="res://addons/quest_sky/quest_sky.tscn" id="1_sky"]
+[ext_resource type="Script" path="res://demo/xr_demo.gd" id="2_script"]
+
+[sub_resource type="PlaneMesh" id="Plane_ground"]
+size = Vector2(30, 30)
+
+[sub_resource type="StandardMaterial3D" id="Ground_material"]
+albedo_color = Color(0.14, 0.18, 0.13, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="Box_marker"]
+size = Vector3(1, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Marker_material"]
+albedo_color = Color(0.62, 0.42, 0.23, 1)
+roughness = 0.85
+
+[node name="XRDemo" type="Node3D"]
+script = ExtResource("2_script")
+
+[node name="QuestSky" parent="." instance=ExtResource("1_sky")]
+sync_system_clock = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_ground")
+material_override = SubResource("Ground_material")
+
+[node name="Marker" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1, -4)
+mesh = SubResource("Box_marker")
+material_override = SubResource("Marker_material")
+
+[node name="XROrigin3D" type="XROrigin3D" parent="."]
+
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
+near = 0.05
+far = 250.0
+
+[node name="LeftController" type="XRController3D" parent="XROrigin3D"]
+tracker = &"left_hand"
+
+[node name="RightController" type="XRController3D" parent="XROrigin3D"]
+tracker = &"right_hand"

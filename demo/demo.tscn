@@ -1,0 +1,74 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="PackedScene" path="res://addons/quest_sky/quest_sky.tscn" id="1_sky"]
+[ext_resource type="Script" path="res://demo/demo.gd" id="2_demo"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(40, 40)
+
+[sub_resource type="StandardMaterial3D" id="Material_ground"]
+albedo_color = Color(0.18, 0.22, 0.16, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+size = Vector3(1, 2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_marker"]
+albedo_color = Color(0.65, 0.45, 0.25, 1)
+roughness = 0.8
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_panel"]
+bg_color = Color(0.04, 0.05, 0.07, 0.88)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Demo" type="Node3D"]
+script = ExtResource("2_demo")
+
+[node name="QuestSky" parent="." instance=ExtResource("1_sky")]
+sync_system_clock = false
+manual_time_minutes = 720.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+material_override = SubResource("Material_ground")
+
+[node name="Marker" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1, -4)
+mesh = SubResource("BoxMesh_marker")
+material_override = SubResource("Material_marker")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 1.7, 6)
+rotation_degrees = Vector3(-5, 180, 0)
+current = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="UI"]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 424.0
+offset_bottom = 134.0
+theme_override_styles/panel = SubResource("StyleBox_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="UI/Panel/VBox"]
+layout_mode = 2
+text = "Quest Sky — 24 小时预览"
+
+[node name="TimeLabel" type="Label" parent="UI/Panel/VBox"]
+layout_mode = 2
+text = "12:00"
+
+[node name="TimeSlider" type="HSlider" parent="UI/Panel/VBox"]
+layout_mode = 2
+min_value = 0.0
+max_value = 1439.0
+step = 1.0
+value = 720.0
