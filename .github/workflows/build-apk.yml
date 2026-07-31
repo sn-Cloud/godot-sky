@@ -48,15 +48,15 @@ jobs:
         run: |
           cargo fmt --all -- --check
           cargo test --workspace
+          cargo check --workspace --release
       - name: Build host and Android GDExtension libraries
         run: |
-          mkdir -p godot/bin/linux godot/bin/android
+          mkdir -p addons/quest_sky/bin/linux addons/quest_sky/bin/android
           cargo build --release -p quest_sky_native
-          cp target/release/libquest_sky_native.so godot/bin/linux/libquest_sky_native.so
+          cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky_native.so
           cargo install cargo-ndk --locked
-          cargo ndk -t arm64-v8a -o godot/bin/android build --release -p quest_sky_native
-          test -f godot/bin/android/arm64-v8a/libquest_sky_native.so
-          cp godot/quest_sky.gdextension.template godot/quest_sky.gdextension
+          cargo ndk -t arm64-v8a -o addons/quest_sky/bin/android build --release -p quest_sky_native
+          test -f addons/quest_sky/bin/android/arm64-v8a/libquest_sky_native.so
       - name: Export Quest debug APK
         id: export
         uses: firebelley/godot-export@v8.0.0
