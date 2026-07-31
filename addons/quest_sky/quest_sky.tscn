@@ -1,11 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=5 format=3]
 
-[ext_resource type="Script" path="res://addons/quest_sky/runtime/quest_sky_controller.gd" id="1_controller"]
-[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky.gdshader" id="2_shader"]
+[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky.gdshader" id="1_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+resource_local_to_scene = true
 render_priority = -127
-shader = ExtResource("2_shader")
+shader = ExtResource("1_shader")
 
 [sub_resource type="SphereMesh" id="SphereMesh_sky"]
 radius = 1.0
@@ -14,6 +14,7 @@ radial_segments = 32
 rings = 16
 
 [sub_resource type="Environment" id="Environment_sky"]
+resource_local_to_scene = true
 background_mode = 1
 background_color = Color(0.01, 0.01, 0.02, 1)
 ambient_light_source = 3
@@ -21,8 +22,12 @@ ambient_light_color = Color(0.04, 0.05, 0.08, 1)
 ambient_light_energy = 0.2
 reflected_light_source = 1
 
-[node name="QuestSky" type="Node3D"]
-script = ExtResource("1_controller")
+[node name="QuestSky" type="QuestSkyController"]
+sync_system_clock = true
+manual_time_minutes = 720.0
+update_interval_seconds = 60.0
+sun_azimuth_offset_degrees = -25.0
+timeline_path = "res://addons/quest_sky/assets/sky/sky_timeline.json"
 
 [node name="SkyMesh" type="MeshInstance3D" parent="."]
 material_override = SubResource("ShaderMaterial_sky")
