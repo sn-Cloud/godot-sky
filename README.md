@@ -33,7 +33,16 @@
 
 在 GitHub 仓库的 **Actions → Build Quest APK → Run workflow** 手动执行。成功后从 `quest-sky-debug-apk` Artifact 下载 APK。工作流不会因普通提交自动运行，因此不会持续发送测试失败邮件。
 
-本地 Android/Rust 构建见 [docs/ANDROID.md](docs/ANDROID.md)。
+最终集中构建已经通过：
+
+- Rust 格式检查及 3 个单元测试；
+- Linux 宿主库和 Android `arm64-v8a` GDExtension 编译；
+- Godot 4.6.3 项目导入及 OpenXR Android 调试 APK 导出；
+- APK v2/v3 签名验证；
+- APK 内 `lib/arm64-v8a/libquest_sky_native.so` 唯一性验证；
+- GitHub Artifact 上传。
+
+本地 Android/Rust 构建见 [docs/ANDROID.md](docs/ANDROID.md)。Quest 3 的实际帧时间、热状态和最终视觉效果仍需实机验证。
 
 ## License
 
