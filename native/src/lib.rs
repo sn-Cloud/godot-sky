@@ -5,14 +5,14 @@ use std::collections::HashSet;
 
 use godot::classes::resource_loader::ThreadLoadStatus;
 use godot::classes::{
-    DirectionalLight3D, INode3D, MeshInstance3D, Node3D, Resource, ResourceLoader,
-    ShaderMaterial, Texture2D, Time, Timer, WorldEnvironment,
+    DirectionalLight3D, INode3D, MeshInstance3D, Node3D, Resource, ResourceLoader, ShaderMaterial,
+    Texture2D, Time, Timer, WorldEnvironment,
 };
+use godot::global::Error;
 use godot::prelude::*;
 use timeline::SkyFrame;
 
-const DEFAULT_TIMELINE_PATH: &str =
-    "res://addons/quest_sky/assets/sky/sky_timeline.json";
+const DEFAULT_TIMELINE_PATH: &str = "res://addons/quest_sky/assets/sky/sky_timeline.json";
 
 struct QuestSkyExtension;
 
@@ -315,24 +315,31 @@ impl QuestSkyController {
         };
 
         if texture_a.is_none() && texture_b.is_none() {
-            self.loaded_frame_a = Some(frame_a);
-            self.loaded_frame_b = Some(frame_b);
+            self.loaded_frame_a = None;
+            self.loaded_frame_b = None;
             self.texture_a = None;
             self.texture_b = None;
             return false;
         }
+
+        let mut actual_frame_a = frame_a;
+        let mut actual_frame_b = frame_b;
         if texture_a.is_none() {
             texture_a = texture_b.clone();
+            actual_frame_a = frame_b;
         }
         if texture_b.is_none() {
             texture_b = texture_a.clone();
+            actual_frame_b = actual_frame_a;
         }
 
-        self.loaded_frame_a = Some(frame_a);
-        self.loaded_frame_b = Some(frame_b);
+        self.loaded_frame_a = Some(actual_frame_a);
+        self.loaded_frame_b = Some(actual_frame_b);
         self.texture_a = texture_a;
         self.texture_b = texture_b;
-        self.request_prefetch((frame_b + 1) % self.frames.len());
+        if actual_frame_a == frame_a && actual_frame_b == frame_b {
+            self.request_prefetch((frame_b + 1) % self.frames.len());
+        }
         true
     }
 
@@ -358,11 +365,12 @@ impl QuestSkyController {
             let mut loader = ResourceLoader::singleton();
             let status = loader.load_threaded_get_status(&godot_path);
             match status {
-                ThreadLoadStatus::LOADED | ThreadLoadStatus::IN_PROGRESS => {
+                ThreadLoadStatus::LOADED => {
                     let resource = loader.load_threaded_get(&godot_path);
                     self.prefetch_path = None;
                     return self.cast_texture_or_record(path, resource);
                 }
+                ThreadLoadStatus::IN_PROGRESS => return None,
                 ThreadLoadStatus::FAILED | ThreadLoadStatus::INVALID_RESOURCE => {
                     self.prefetch_path = None;
                     self.record_texture_failure(path, "threaded load failed");
@@ -406,14 +414,12 @@ impl QuestSkyController {
             return;
         }
 
-        let result = ResourceLoader::singleton().load_threaded_request(GString::from(path.as_str()));
+        let result =
+            ResourceLoader::singleton().load_threaded_request(GString::from(path.as_str()));
         if result == Error::OK {
             self.prefetch_path = Some(path);
         } else {
-            self.record_texture_failure(
-                &path,
-                &format!("threaded request failed with {result:?}"),
-            );
+            self.record_texture_failure(&path, &format!("threaded request failed with {result:?}"));
         }
     }
 
@@ -449,10 +455,8 @@ impl QuestSkyController {
         if let Some(material) = self.material.as_mut() {
             let shader_sun_color = Vector3::new(sun_color.r, sun_color.g, sun_color.b);
             material.set_shader_parameter("sun_color", &shader_sun_color.to_variant());
-            material.set_shader_parameter(
-                "sun_intensity",
-                &(f64::from(sun_energy) * 1.7).to_variant(),
-            );
+            material
+                .set_shader_parameter("sun_intensity", &(f64::from(sun_energy) * 1.7).to_variant());
             material.set_shader_parameter("moon_intensity", &f64::from(moon_energy).to_variant());
         }
 
