@@ -4,22 +4,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  rust:
+  rust-and-godot:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - name: Format
-        run: cargo fmt --all -- --check
-      - name: Test
-        run: cargo test --workspace
-      - name: Check release
-        run: cargo check --workspace --release
-
-  godot:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
+      - name: Validate Rust
+        run: |
+          cargo fmt --all -- --check
+          cargo test --workspace
+          cargo check --workspace --release
+      - name: Build Linux GDExtension
+        run: |
+          mkdir -p addons/quest_sky/bin/linux
+          cargo build --release -p quest_sky_native
+          cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky_native.so
       - name: Download Godot 4.6.3
         run: |
           curl --fail --location --output godot.zip \

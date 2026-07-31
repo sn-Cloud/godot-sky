@@ -4,7 +4,7 @@ config_version=5
 
 [application]
 config/name="Quest Sky"
-config/version="0.2.1"
+config/version="0.3.0"
 run/main_scene="res://demo/launcher.tscn"
 config/icon="res://icon.svg"
 
@@ -23,6 +23,3 @@ textures/vram_compression/import_etc2_astc=true
 [xr]
 openxr/enabled=true
 shaders/enabled=true
-
-[editor_plugins]
-enabled=PackedStringArray("res://addons/quest_sky/plugin.cfg")

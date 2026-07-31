@@ -1,6 +1,7 @@
 .godot/
 target/
 native/target/
+addons/quest_sky/bin/
 godot/bin/
 godot/quest_sky.gdextension
 bin/*.dll
