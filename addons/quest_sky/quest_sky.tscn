@@ -7,8 +7,11 @@
 render_priority = -127
 shader = ExtResource("2_shader")
 
-[sub_resource type="BoxMesh" id="BoxMesh_sky"]
-size = Vector3(2, 2, 2)
+[sub_resource type="SphereMesh" id="SphereMesh_sky"]
+radius = 1.0
+height = 2.0
+radial_segments = 32
+rings = 16
 
 [sub_resource type="Environment" id="Environment_sky"]
 background_mode = 1
@@ -23,7 +26,7 @@ script = ExtResource("1_controller")
 
 [node name="SkyMesh" type="MeshInstance3D" parent="."]
 material_override = SubResource("ShaderMaterial_sky")
-mesh = SubResource("BoxMesh_sky")
+mesh = SubResource("SphereMesh_sky")
 cast_shadow = 0
 extra_cull_margin = 16384.0
 
