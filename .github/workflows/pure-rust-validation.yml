@@ -1,0 +1,85 @@
+name: Pure Rust Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Collect Rust and Godot validation results
+        run: |
+          mkdir -p validation addons/quest_sky/bin/linux
+          set +e
+
+          cargo fmt --all -- --check > validation/cargo-fmt.log 2>&1
+          echo $? > validation/cargo-fmt.status
+
+          cargo test --workspace > validation/cargo-test.log 2>&1
+          echo $? > validation/cargo-test.status
+
+          cargo check --workspace --release > validation/cargo-check.log 2>&1
+          echo $? > validation/cargo-check.status
+
+          cargo build --release -p quest_sky_native > validation/cargo-build.log 2>&1
+          echo $? > validation/cargo-build.status
+          if [ -f target/release/libquest_sky_native.so ]; then
+            cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky_native.so
+          fi
+
+          curl --fail --location --output godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
+            > validation/godot-download.log 2>&1
+          DOWNLOAD_STATUS=$?
+          echo $DOWNLOAD_STATUS > validation/godot-download.status
+
+          if [ $DOWNLOAD_STATUS -eq 0 ]; then
+            unzip -q godot.zip -d godot-dist
+            GODOT_SOURCE="$(find godot-dist -type f -name 'Godot*' | head -n 1)"
+            if [ -n "$GODOT_SOURCE" ]; then
+              cp "$GODOT_SOURCE" godot-bin
+              chmod +x godot-bin
+              ./godot-bin --headless --xr-mode off --editor --path . --quit \
+                > validation/godot-import.log 2>&1
+              echo $? > validation/godot-import.status
+              ./godot-bin --headless --xr-mode off --path . res://demo/demo.tscn --quit-after 3 \
+                > validation/godot-demo.log 2>&1
+              echo $? > validation/godot-demo.status
+            else
+              echo 127 > validation/godot-import.status
+              echo 127 > validation/godot-demo.status
+              echo "Godot executable was not found after extraction." > validation/godot-import.log
+              cp validation/godot-import.log validation/godot-demo.log
+            fi
+          else
+            echo 127 > validation/godot-import.status
+            echo 127 > validation/godot-demo.status
+            echo "Godot download failed." > validation/godot-import.log
+            cp validation/godot-import.log validation/godot-demo.log
+          fi
+
+          cp Cargo.lock validation/Cargo.lock 2>/dev/null || true
+          printf 'fmt=%s\ntest=%s\ncheck=%s\nbuild=%s\ngodot_download=%s\ngodot_import=%s\ngodot_demo=%s\n' \
+            "$(cat validation/cargo-fmt.status)" \
+            "$(cat validation/cargo-test.status)" \
+            "$(cat validation/cargo-check.status)" \
+            "$(cat validation/cargo-build.status)" \
+            "$(cat validation/godot-download.status)" \
+            "$(cat validation/godot-import.status)" \
+            "$(cat validation/godot-demo.status)" \
+            | tee validation/status.txt
+
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pure-rust-validation
+          path: validation/
+          if-no-files-found: error
+          retention-days: 2
