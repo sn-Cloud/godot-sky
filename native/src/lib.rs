@@ -414,8 +414,8 @@ impl QuestSkyController {
             return;
         }
 
-        let result =
-            ResourceLoader::singleton().load_threaded_request(GString::from(path.as_str()));
+        let godot_path = GString::from(path.as_str());
+        let result = ResourceLoader::singleton().load_threaded_request(&godot_path);
         if result == Error::OK {
             self.prefetch_path = Some(path);
         } else {
