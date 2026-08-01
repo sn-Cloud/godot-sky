@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use godot::classes::resource_loader::ThreadLoadStatus;
 use godot::classes::{
-    DirectionalLight3D, INode3D, MeshInstance3D, Node3D, Resource, ResourceLoader, ShaderMaterial,
+    DirectionalLight3D, Engine, INode3D, Node3D, Resource, ResourceLoader, ShaderMaterial,
     Texture2D, Time, Timer, WorldEnvironment,
 };
 use godot::global::Error;
@@ -21,25 +21,30 @@ unsafe impl ExtensionLibrary for QuestSkyExtension {}
 
 /// Pure-Rust runtime controller for the Quest-oriented texture sky.
 #[derive(GodotClass)]
-#[class(base = Node3D)]
+#[class(tool, base = Node3D)]
 pub struct QuestSkyController {
     #[export]
+    #[var(set = set_sync_system_clock)]
     sync_system_clock: bool,
     #[export]
+    #[var(set = set_manual_time_minutes)]
     manual_time_minutes: f64,
     #[export]
+    #[var(set = set_update_interval_seconds)]
     update_interval_seconds: f64,
     #[export]
+    #[var(set = set_sun_azimuth_offset_degrees)]
     sun_azimuth_offset_degrees: f64,
     #[export]
+    #[var(set = set_timeline_path)]
     timeline_path: GString,
 
     frames: Vec<SkyFrame>,
-    sky_mesh: Option<Gd<MeshInstance3D>>,
     sun_light: Option<Gd<DirectionalLight3D>>,
+    moon_light: Option<Gd<DirectionalLight3D>>,
     world_environment: Option<Gd<WorldEnvironment>>,
     update_timer: Option<Gd<Timer>>,
-    material: Option<Gd<ShaderMaterial>>,
+    environment_material: Option<Gd<ShaderMaterial>>,
 
     loaded_frame_a: Option<usize>,
     loaded_frame_b: Option<usize>,
@@ -47,6 +52,7 @@ pub struct QuestSkyController {
     texture_b: Option<Gd<Texture2D>>,
     failed_texture_paths: HashSet<String>,
     prefetch_path: Option<String>,
+    editor_refresh_elapsed: f64,
 
     base: Base<Node3D>,
 }
@@ -61,56 +67,77 @@ impl INode3D for QuestSkyController {
             sun_azimuth_offset_degrees: -25.0,
             timeline_path: GString::from(DEFAULT_TIMELINE_PATH),
             frames: Vec::new(),
-            sky_mesh: None,
             sun_light: None,
+            moon_light: None,
             world_environment: None,
             update_timer: None,
-            material: None,
+            environment_material: None,
             loaded_frame_a: None,
             loaded_frame_b: None,
             texture_a: None,
             texture_b: None,
             failed_texture_paths: HashSet::new(),
             prefetch_path: None,
+            editor_refresh_elapsed: 0.0,
             base,
         }
     }
 
     fn ready(&mut self) {
-        if !self.bind_scene_nodes() {
+        if !self.initialize_scene() {
             self.base_mut().set_process(false);
+        }
+    }
+
+    fn process(&mut self, delta: f64) {
+        if !Engine::singleton().is_editor_hint() {
             return;
         }
 
-        self.set_static_shader_parameters();
-        if !self.reload_timeline_internal() {
-            self.set_sky_visible(false);
-            return;
+        self.editor_refresh_elapsed += delta;
+        if self.editor_refresh_elapsed >= self.clamped_update_interval() {
+            self.editor_refresh_elapsed = 0.0;
+            self.refresh_sky_state();
         }
-
-        let callable = self.base().callable("refresh_sky_state");
-        let target_interval = self.clamped_update_interval();
-        if let Some(timer) = self.update_timer.as_mut() {
-            timer.set_wait_time(target_interval);
-            if !timer.is_connected("timeout", &callable) {
-                let result = timer.connect("timeout", &callable);
-                if result != Error::OK {
-                    godot_error!("Quest Sky failed to connect update timer: {result:?}");
-                    return;
-                }
-            }
-            timer.start();
-        }
-
-        self.refresh_sky_state();
     }
 }
 
 #[godot_api]
 impl QuestSkyController {
     #[func]
+    pub fn set_sync_system_clock(&mut self, enabled: bool) {
+        self.sync_system_clock = enabled;
+        self.refresh_after_property_change(false);
+    }
+
+    #[func]
+    pub fn set_manual_time_minutes(&mut self, minutes: f64) {
+        self.manual_time_minutes = minutes.rem_euclid(1440.0);
+        self.refresh_after_property_change(false);
+    }
+
+    #[func]
+    pub fn set_update_interval_seconds(&mut self, seconds: f64) {
+        self.update_interval_seconds = seconds.clamp(1.0, 600.0);
+        self.editor_refresh_elapsed = 0.0;
+        self.refresh_after_property_change(false);
+    }
+
+    #[func]
+    pub fn set_sun_azimuth_offset_degrees(&mut self, degrees: f64) {
+        self.sun_azimuth_offset_degrees = degrees.clamp(-180.0, 180.0);
+        self.refresh_after_property_change(false);
+    }
+
+    #[func]
+    pub fn set_timeline_path(&mut self, path: GString) {
+        self.timeline_path = path;
+        self.refresh_after_property_change(true);
+    }
+
+    #[func]
     pub fn refresh_sky_state(&mut self) {
-        if self.frames.is_empty() || self.material.is_none() {
+        if self.frames.is_empty() || self.environment_material.is_none() {
             return;
         }
 
@@ -124,21 +151,27 @@ impl QuestSkyController {
         let minutes = self.current_minutes();
         let (frame_a, frame_b, blend) = self.find_keyframe_pair(minutes);
         if !self.ensure_textures(frame_a, frame_b) {
-            self.set_sky_visible(false);
             return;
         }
-        self.set_sky_visible(true);
 
         let current = self.frames[frame_a].clone();
         let next = self.frames[frame_b].clone();
         let texture_a = self.texture_a.clone().expect("validated texture A");
         let texture_b = self.texture_b.clone().expect("validated texture B");
         let sun_direction = self.calculate_sun_direction(minutes);
+        let cloud_offsets = math::cloud_sample_offsets(
+            current.cloud_phase,
+            next.cloud_phase,
+            blend,
+            frame_b <= frame_a,
+        );
 
-        if let Some(material) = self.material.as_mut() {
+        if let Some(material) = self.environment_material.as_mut() {
             material.set_shader_parameter("sky_texture_a", &texture_a.to_variant());
             material.set_shader_parameter("sky_texture_b", &texture_b.to_variant());
             material.set_shader_parameter("blend_factor", &blend.to_variant());
+            material.set_shader_parameter("cloud_uv_offset_a", &cloud_offsets[0].to_variant());
+            material.set_shader_parameter("cloud_uv_offset_b", &cloud_offsets[1].to_variant());
             material.set_shader_parameter("sun_direction", &sun_direction.to_variant());
             material.set_shader_parameter("moon_direction", &(-sun_direction).to_variant());
         }
@@ -151,8 +184,6 @@ impl QuestSkyController {
         let loaded = self.reload_timeline_internal();
         if loaded {
             self.refresh_sky_state();
-        } else {
-            self.set_sky_visible(false);
         }
         loaded
     }
@@ -173,40 +204,106 @@ impl QuestSkyController {
 }
 
 impl QuestSkyController {
+    fn initialize_scene(&mut self) -> bool {
+        if !self.bind_scene_nodes() {
+            return false;
+        }
+
+        self.set_static_shader_parameters();
+        if !self.reload_timeline_internal() {
+            return false;
+        }
+
+        if !self.configure_update_driver() {
+            return false;
+        }
+
+        self.refresh_sky_state();
+        true
+    }
+
+    fn refresh_after_property_change(&mut self, reload_timeline: bool) {
+        if !self.base().is_inside_tree() {
+            return;
+        }
+
+        if self.environment_material.is_none() && !self.bind_scene_nodes() {
+            return;
+        }
+        self.set_static_shader_parameters();
+
+        if reload_timeline || self.frames.is_empty() {
+            if !self.reload_timeline_internal() {
+                return;
+            }
+        }
+
+        if self.configure_update_driver() {
+            self.refresh_sky_state();
+        }
+    }
+
+    fn configure_update_driver(&mut self) -> bool {
+        let editor_hint = Engine::singleton().is_editor_hint();
+        let target_interval = self.clamped_update_interval();
+        let callable = self.base().callable("refresh_sky_state");
+
+        if let Some(timer) = self.update_timer.as_mut() {
+            timer.set_wait_time(target_interval);
+            if editor_hint {
+                timer.stop();
+            } else {
+                if !timer.is_connected("timeout", &callable) {
+                    let result = timer.connect("timeout", &callable);
+                    if result != Error::OK {
+                        godot_error!("Quest Sky failed to connect update timer: {result:?}");
+                        return false;
+                    }
+                }
+                timer.start();
+            }
+        }
+
+        self.base_mut().set_process(editor_hint);
+        true
+    }
+
     fn bind_scene_nodes(&mut self) -> bool {
-        let (sky_mesh, sun_light, world_environment, update_timer) = {
+        let (sun_light, moon_light, world_environment, update_timer) = {
             let base = self.base();
             (
-                base.try_get_node_as::<MeshInstance3D>("SkyMesh"),
                 base.try_get_node_as::<DirectionalLight3D>("SunLight"),
+                base.try_get_node_as::<DirectionalLight3D>("MoonLight"),
                 base.try_get_node_as::<WorldEnvironment>("WorldEnvironment"),
                 base.try_get_node_as::<Timer>("UpdateTimer"),
             )
         };
 
-        self.sky_mesh = sky_mesh;
         self.sun_light = sun_light;
+        self.moon_light = moon_light;
         self.world_environment = world_environment;
         self.update_timer = update_timer;
 
-        if self.sky_mesh.is_none()
-            || self.sun_light.is_none()
+        if self.sun_light.is_none()
+            || self.moon_light.is_none()
             || self.world_environment.is_none()
             || self.update_timer.is_none()
         {
             godot_error!(
-                "Quest Sky native scene is incomplete. Expected SkyMesh, SunLight, WorldEnvironment and UpdateTimer."
+                "Quest Sky native scene is incomplete. Expected SunLight, MoonLight, WorldEnvironment and UpdateTimer."
             );
             return false;
         }
 
-        self.material = self
-            .sky_mesh
+        self.environment_material = self
+            .world_environment
             .as_ref()
-            .and_then(|mesh| mesh.get_material_override())
+            .and_then(|world| world.get_environment())
+            .and_then(|environment| environment.get_sky())
+            .and_then(|sky| sky.get_material())
             .and_then(|material| material.try_cast::<ShaderMaterial>().ok());
-        if self.material.is_none() {
-            godot_error!("Quest Sky SkyMesh must use a ShaderMaterial override.");
+        if self.environment_material.is_none() {
+            godot_error!("Quest Sky Environment must use a Sky with a ShaderMaterial.");
             return false;
         }
 
@@ -214,7 +311,7 @@ impl QuestSkyController {
     }
 
     fn set_static_shader_parameters(&mut self) {
-        if let Some(material) = self.material.as_mut() {
+        if let Some(material) = self.environment_material.as_mut() {
             material.set_shader_parameter("sun_inner_cos", &(0.0105_f64).cos().to_variant());
             material.set_shader_parameter("sun_outer_cos", &(0.0142_f64).cos().to_variant());
             material.set_shader_parameter("moon_inner_cos", &(0.0080_f64).cos().to_variant());
@@ -452,7 +549,7 @@ impl QuestSkyController {
         let sun_energy = lerp_f32(current.sun_energy, next.sun_energy, blend);
         let moon_energy = lerp_f32(current.moon_energy, next.moon_energy, blend);
 
-        if let Some(material) = self.material.as_mut() {
+        if let Some(material) = self.environment_material.as_mut() {
             let shader_sun_color = Vector3::new(sun_color.r, sun_color.g, sun_color.b);
             material.set_shader_parameter("sun_color", &shader_sun_color.to_variant());
             material
@@ -467,6 +564,12 @@ impl QuestSkyController {
             light.set_basis(light_basis(-sun_direction));
         }
 
+        if let Some(light) = self.moon_light.as_mut() {
+            light.set_visible(moon_energy > 0.001);
+            light.set("light_energy", &(f64::from(moon_energy) * 1.6).to_variant());
+            light.set_basis(light_basis(sun_direction));
+        }
+
         if let Some(world_environment) = self.world_environment.as_mut() {
             if let Some(mut environment) = world_environment.get_environment() {
                 environment.set("ambient_light_source", &3_i64.to_variant());
@@ -475,13 +578,14 @@ impl QuestSkyController {
                     "ambient_light_energy",
                     &f64::from(ambient_energy).to_variant(),
                 );
+                let daylight = (sun_energy / 0.36).clamp(0.0, 1.0);
+                let sky_contribution = lerp_f32(0.25, 0.75, f64::from(daylight));
+                environment.set(
+                    "ambient_light_sky_contribution",
+                    &f64::from(sky_contribution).to_variant(),
+                );
+                environment.set("reflected_light_source", &0_i64.to_variant());
             }
-        }
-    }
-
-    fn set_sky_visible(&mut self, visible: bool) {
-        if let Some(sky_mesh) = self.sky_mesh.as_mut() {
-            sky_mesh.set_visible(visible);
         }
     }
 }

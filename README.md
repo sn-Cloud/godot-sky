@@ -11,18 +11,21 @@
 - 设备时间和手动时间；
 - JSON 时间轴读取、校验和任意间距关键帧查找；
 - 当前/下一张天空贴图加载及再下一张贴图预取；
-- Shader 参数、太阳、月亮、方向光和环境光更新；
+- 可见天空与环境天空 Shader 参数、太阳光、月光、环境光和反射更新；
 - Timer 生命周期和纹理加载失败降级。
 
 Rust 动态库是必需组件。缺少或版本不兼容时，Godot 会明确报告 GDExtension 加载失败，不会静默改走 GDScript。
 
+`QuestSkyController` 同时是编辑器工具类。实例化 `quest_sky.tscn` 后可直接在 3D 编辑器中预览天空；修改手动时间、系统时间同步、太阳方位偏移或时间轴路径时会立即刷新预览。
+
 ## 渲染设计
 
-- 24 张每小时关键帧天空贴图，运行时仅持有活动贴图。
-- 倒置低细分 `SphereMesh` 直接提供经纬度 UV；片元 Shader 不执行 `atan`、`asin` 或八面体解码。
+- 8 张真实感 2:1 经纬度 PNG 关键帧，覆盖午夜、黎明、日出、白天、黄昏和入夜，运行时仅持有活动贴图。
+- 可见天空由 Godot 原生 `Environment.sky` 绘制，在 XR 中使用每只眼睛的视线方向，没有近距离球体的双目视差。
 - 默认每分钟更新一次天空状态。
-- 单个天空球 Draw Call，每像素两次天空贴图采样。
-- 太阳和月亮使用解析圆盘；无体积云、FBM、Ray March、屏幕空间雾和动态 Radiance Cubemap。
+- 可见背景、环境漫反射与 PBR 反射共用同一个 `Environment.sky`。
+- 太阳和月亮使用解析圆盘；太阳与月亮各有独立的 `DirectionalLight3D`。无体积云、FBM、Ray March 和屏幕空间雾。
+- `Environment.sky` 仅在低频时间轴更新时重建辐照/反射数据，不执行逐帧动态大气计算。
 - Quest 使用 Godot 4.6 Compatibility 渲染器和 OpenXR。
 
 ## 目录
@@ -49,7 +52,7 @@ sync_system_clock = false
 manual_time_minutes = 720.0
 ```
 
-替换 `addons/quest_sky/assets/sky/sky_00.svg` 至 `sky_23.svg` 可更换全天视觉风格。正式资源建议采用左右无缝的 2:1 经纬度贴图。
+天空资源位于 `addons/quest_sky/assets/sky/sky_HHMM.png`，时间轴在 8 个关键时段间连续插值。正式资源应采用左右无缝的 2:1 经纬度栅格贴图。
 
 ## 构建测试 APK
 

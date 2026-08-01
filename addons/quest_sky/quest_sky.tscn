@@ -1,26 +1,26 @@
 [gd_scene load_steps=5 format=3]
 
-[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky.gdshader" id="1_shader"]
+[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky_environment.gdshader" id="2_environment_shader"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_environment_sky"]
 resource_local_to_scene = true
-render_priority = -127
-shader = ExtResource("1_shader")
+shader = ExtResource("2_environment_shader")
 
-[sub_resource type="SphereMesh" id="SphereMesh_sky"]
-radius = 1.0
-height = 2.0
-radial_segments = 32
-rings = 16
+[sub_resource type="Sky" id="Sky_environment"]
+radiance_size = 3
+process_mode = 2
+sky_material = SubResource("ShaderMaterial_environment_sky")
 
 [sub_resource type="Environment" id="Environment_sky"]
 resource_local_to_scene = true
-background_mode = 1
+background_mode = 2
 background_color = Color(0.01, 0.01, 0.02, 1)
+sky = SubResource("Sky_environment")
 ambient_light_source = 3
 ambient_light_color = Color(0.04, 0.05, 0.08, 1)
 ambient_light_energy = 0.2
-reflected_light_source = 1
+ambient_light_sky_contribution = 0.75
+reflected_light_source = 0
 
 [node name="QuestSky" type="QuestSkyController"]
 sync_system_clock = true
@@ -29,15 +29,15 @@ update_interval_seconds = 60.0
 sun_azimuth_offset_degrees = -25.0
 timeline_path = "res://addons/quest_sky/assets/sky/sky_timeline.json"
 
-[node name="SkyMesh" type="MeshInstance3D" parent="."]
-material_override = SubResource("ShaderMaterial_sky")
-mesh = SubResource("SphereMesh_sky")
-cast_shadow = 0
-extra_cull_margin = 16384.0
-
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 light_color = Color(1, 0.95, 0.88, 1)
 light_energy = 1.0
+shadow_enabled = true
+directional_shadow_max_distance = 30.0
+
+[node name="MoonLight" type="DirectionalLight3D" parent="."]
+light_color = Color(0.58, 0.7, 1, 1)
+light_energy = 0.0
 shadow_enabled = true
 directional_shadow_max_distance = 30.0
 

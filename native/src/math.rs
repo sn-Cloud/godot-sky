@@ -17,6 +17,21 @@ pub fn sun_direction(minutes: f64, azimuth_offset_radians: f64) -> [f64; 3] {
     normalize3([x * cos_a + z * sin_a, y, -x * sin_a + z * cos_a])
 }
 
+pub fn cloud_sample_offsets(
+    phase_a: f64,
+    phase_b: f64,
+    blend: f64,
+    wraps_midnight: bool,
+) -> [f64; 2] {
+    let mut unwrapped_b = phase_b;
+    if wraps_midnight || unwrapped_b < phase_a {
+        unwrapped_b += 1.0;
+    }
+
+    let current_phase = phase_a + (unwrapped_b - phase_a) * blend.clamp(0.0, 1.0);
+    [-current_phase, -current_phase]
+}
+
 fn normalize3(value: [f64; 3]) -> [f64; 3] {
     let length = (value[0] * value[0] + value[1] * value[1] + value[2] * value[2]).sqrt();
     [value[0] / length, value[1] / length, value[2] / length]
@@ -36,5 +51,23 @@ mod tests {
     fn noon_is_above_horizon() {
         let direction = sun_direction(720.0, 0.0);
         assert!(direction[1] > 0.98);
+    }
+
+    #[test]
+    fn cloud_offsets_align_both_keyframes_to_interpolated_phase() {
+        assert_eq!(cloud_sample_offsets(0.25, 0.5, 0.0, false), [-0.25, -0.25]);
+        assert_eq!(cloud_sample_offsets(0.25, 0.5, 1.0, false), [-0.5, -0.5]);
+        assert_eq!(
+            cloud_sample_offsets(0.25, 0.5, 0.5, false),
+            [-0.375, -0.375]
+        );
+    }
+
+    #[test]
+    fn cloud_offsets_remain_continuous_across_midnight() {
+        assert_eq!(
+            cloud_sample_offsets(0.875, 0.0, 0.5, true),
+            [-0.9375, -0.9375]
+        );
     }
 }

@@ -7,6 +7,7 @@ use serde_json::Value;
 pub struct SkyFrame {
     pub minute: f64,
     pub texture: String,
+    pub cloud_phase: f64,
     pub ambient_color: Color,
     pub ambient_energy: f32,
     pub sun_color: Color,
@@ -18,6 +19,8 @@ pub struct SkyFrame {
 struct RawSkyFrame {
     minute: f64,
     texture: String,
+    #[serde(default)]
+    cloud_phase: Option<f64>,
     ambient_color: Vec<f32>,
     ambient_energy: f32,
     sun_color: Vec<f32>,
@@ -91,6 +94,13 @@ fn validate_frame(raw: RawSkyFrame) -> Result<SkyFrame, String> {
         return Err("texture path is empty".to_owned());
     }
 
+    let cloud_phase = raw.cloud_phase.unwrap_or(raw.minute / 1440.0);
+    if !cloud_phase.is_finite() || !(0.0..1.0).contains(&cloud_phase) {
+        return Err(format!(
+            "cloud_phase must be finite and inside 0..1, got {cloud_phase}"
+        ));
+    }
+
     let texture_path = GString::from(raw.texture.as_str());
     if !ResourceLoader::singleton().exists(&texture_path) {
         return Err(format!("texture does not exist: {}", raw.texture));
@@ -111,6 +121,7 @@ fn validate_frame(raw: RawSkyFrame) -> Result<SkyFrame, String> {
     Ok(SkyFrame {
         minute: raw.minute,
         texture: raw.texture,
+        cloud_phase,
         ambient_color,
         ambient_energy: raw.ambient_energy,
         sun_color,
