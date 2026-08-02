@@ -17,17 +17,7 @@ uniform float sun_outer_cos = 0.99990;
 uniform float moon_inner_cos = 0.99997;
 uniform float moon_outer_cos = 0.99994;
 
-const float QUEST_PI = 3.14159265358979323846;
 const float SEAM_BLEND_WIDTH = 0.01;
-
-
-vec2 equirectangular_uv(vec3 direction) {
-    vec3 normalized_direction = normalize(direction);
-    return vec2(
-        atan(normalized_direction.z, normalized_direction.x) / (2.0 * QUEST_PI) + 0.5,
-        acos(clamp(normalized_direction.y, -1.0, 1.0)) / QUEST_PI
-    );
-}
 
 
 vec3 sample_seamless_sky(sampler2D sky_texture, vec2 uv) {
@@ -58,7 +48,10 @@ vec3 sample_seamless_sky(sampler2D sky_texture, vec2 uv) {
 
 void sky() {
     vec3 direction = normalize(EYEDIR);
-    vec2 uv = equirectangular_uv(direction);
+    // SKY_COORDS is Godot's panorama UV for the current sky pixel. Using it
+    // keeps textures produced by sky_bake_panorama() on the same hemisphere;
+    // reconstructing latitude from EYEDIR inverted the baked panorama in XR.
+    vec2 uv = SKY_COORDS;
     vec3 color = mix(
         sample_seamless_sky(sky_texture_a, uv + vec2(cloud_uv_offset_a, 0.0)),
         sample_seamless_sky(sky_texture_b, uv + vec2(cloud_uv_offset_b, 0.0)),
