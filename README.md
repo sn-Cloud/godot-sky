@@ -26,7 +26,7 @@ Rust 动态库是必需组件。缺少或版本不兼容时，Godot 会明确报
 - 可见背景、环境漫反射与 PBR 反射共用同一个 `Environment.sky`。
 - 太阳和月亮使用解析圆盘；太阳与月亮各有独立的 `DirectionalLight3D`。无体积云、FBM、Ray March 和屏幕空间雾。
 - `Environment.sky` 仅在低频时间轴更新时重建辐照/反射数据，不执行逐帧动态大气计算。
-- Quest 使用 Godot 4.6 Compatibility 渲染器和 OpenXR。
+- Quest 使用 Godot 4.6 Mobile 渲染器和 OpenXR；桌面串流预览与 Quest 独立运行都以 Mobile 渲染器为验证基线。
 
 ## 目录
 

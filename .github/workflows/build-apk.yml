@@ -49,6 +49,14 @@ jobs:
           cargo fmt --all -- --check
           cargo test --workspace
           cargo check --workspace --release
+      - name: Validate Mobile renderer baseline
+        run: |
+          grep -F 'config/features=PackedStringArray(' project.godot | grep -F '"Mobile"'
+          grep -Fx 'renderer/rendering_method="mobile"' project.godot
+          if grep -Fq 'gl_compatibility' project.godot README.md docs/ANDROID.md; then
+            echo "Compatibility renderer reference found in the Mobile renderer baseline" >&2
+            exit 1
+          fi
       - name: Build host and Android GDExtension libraries
         run: |
           mkdir -p addons/quest_sky/bin/linux addons/quest_sky/bin/android

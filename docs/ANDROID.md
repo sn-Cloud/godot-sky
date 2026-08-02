@@ -8,6 +8,19 @@
 - Android NDK 28.1.13356709
 - Rust stable、`aarch64-linux-android` target、`cargo-ndk`
 
+## 渲染器基线
+
+项目固定使用 Godot Mobile 渲染器。桌面串流预览通过 RenderingDevice 后端运行，Quest 3 独立运行使用 Mobile + Vulkan；Compatibility / OpenGL 不是本项目的验证目标。
+
+`project.godot` 必须保留以下设置：
+
+```ini
+[rendering]
+renderer/rendering_method="mobile"
+```
+
+`config/features` 同时记录 `"Mobile"`。Godot 会省略值等于平台默认值的 `renderer/rendering_method.mobile`；这不代表移动端切换到了其他渲染器。
+
 ## 原生库是必需组件
 
 Quest Sky 插件运行时全部由 Rust GDExtension 实现。仓库不包含 GDScript 后备控制器，也不会在原生库缺失时继续运行。
@@ -63,7 +76,7 @@ cargo test --workspace
 cargo check --workspace --release
 ```
 
-然后使用 Godot 4.6.3 导入项目并运行 `demo/demo.tscn`。若原生库缺失、损坏或与平台不兼容，Godot 会报告 GDExtension 加载错误；这是预期行为，不存在 GDScript 降级路径。
+然后使用 Godot 4.6.3 以 Mobile 渲染器导入项目并运行 `demo/demo.tscn`。启动日志应显示 Mobile 渲染方法及 Vulkan、Direct3D 12 或 Metal 驱动，而不是 OpenGL。若原生库缺失、损坏或与平台不兼容，Godot 会报告 GDExtension 加载错误；这是预期行为，不存在 GDScript 降级路径。
 
 ## 导出 Quest APK
 
