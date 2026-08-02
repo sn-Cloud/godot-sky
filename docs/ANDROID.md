@@ -1,4 +1,4 @@
-# Quest 3 / Android ARM64 构建
+# VRSky 的 Quest 3 / Android ARM64 构建
 
 ## 依赖
 
@@ -23,12 +23,12 @@ renderer/rendering_method="mobile"
 
 ## 原生库是必需组件
 
-Quest Sky 插件运行时全部由 Rust GDExtension 实现。仓库不包含 GDScript 后备控制器，也不会在原生库缺失时继续运行。
+VRSky 插件运行时全部由 Rust GDExtension 实现。仓库不包含 GDScript 后备控制器，也不会在原生库缺失时继续运行。
 
 GDExtension 描述文件固定为：
 
 ```text
-addons/quest_sky/quest_sky.gdextension
+addons/vrsky/vrsky.gdextension
 ```
 
 源码仓库不会提交平台动态库。打开 Godot 项目前，需要至少构建当前编辑器平台对应的原生库。
@@ -38,22 +38,22 @@ addons/quest_sky/quest_sky.gdextension
 ```bash
 rustup target add aarch64-linux-android
 cargo install cargo-ndk --locked
-mkdir -p addons/quest_sky/bin/android
-cargo ndk -t arm64-v8a -o addons/quest_sky/bin/android build --release -p quest_sky_native
+mkdir -p addons/vrsky/bin/android
+cargo ndk -t arm64-v8a -o addons/vrsky/bin/android build --release -p vrsky_native
 ```
 
 生成文件必须位于：
 
 ```text
-addons/quest_sky/bin/android/arm64-v8a/libquest_sky_native.so
+addons/vrsky/bin/android/arm64-v8a/libvrsky_native.so
 ```
 
 ## Linux 编辑器验证
 
 ```bash
-cargo build --release -p quest_sky_native
-mkdir -p addons/quest_sky/bin/linux
-cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky_native.so
+cargo build --release -p vrsky_native
+mkdir -p addons/vrsky/bin/linux
+cp target/release/libvrsky_native.so addons/vrsky/bin/linux/libvrsky_native.so
 ```
 
 ## Windows 编辑器验证
@@ -61,9 +61,9 @@ cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky
 在 PowerShell 中执行：
 
 ```powershell
-cargo build --release -p quest_sky_native
-New-Item -ItemType Directory -Force addons/quest_sky/bin/windows | Out-Null
-Copy-Item target/release/quest_sky_native.dll addons/quest_sky/bin/windows/quest_sky_native.dll
+cargo build --release -p vrsky_native
+New-Item -ItemType Directory -Force addons/vrsky/bin/windows | Out-Null
+Copy-Item target/release/vrsky_native.dll addons/vrsky/bin/windows/vrsky_native.dll
 ```
 
 ## 验证
@@ -80,6 +80,6 @@ cargo check --workspace --release
 
 ## 导出 Quest APK
 
-在 Godot 中配置 Android SDK 和 Java SDK 路径，选择 `Quest 3 Debug` 导出预设。该预设只包含 ARM64，XR 模式为 OpenXR。
+在 Godot 中配置 Android SDK 和 Java SDK 路径，选择 `VRSky Quest 3 Debug` 导出预设。该预设只包含 ARM64，XR 模式为 OpenXR。
 
-GitHub Actions 会构建 Linux 宿主库和 Android ARM64 库、导出 APK，并验证 APK 中只存在一个 `lib/arm64-v8a/libquest_sky_native.so`。正式发布时必须使用自己的 Meta 应用标识和发布签名，不要把签名文件提交到仓库。
+GitHub Actions 会构建 Linux 宿主库和 Android ARM64 库、导出 APK，并验证 APK 中只存在一个 `lib/arm64-v8a/libvrsky_native.so`。正式发布时必须使用自己的 Meta 应用标识和发布签名，不要把签名文件提交到仓库。

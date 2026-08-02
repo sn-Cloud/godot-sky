@@ -16,9 +16,9 @@ jobs:
           cargo check --workspace --release
       - name: Build Linux GDExtension
         run: |
-          mkdir -p addons/quest_sky/bin/linux
-          cargo build --release -p quest_sky_native
-          cp target/release/libquest_sky_native.so addons/quest_sky/bin/linux/libquest_sky_native.so
+          mkdir -p addons/vrsky/bin/linux
+          cargo build --release -p vrsky_native
+          cp target/release/libvrsky_native.so addons/vrsky/bin/linux/libvrsky_native.so
       - name: Download Godot 4.6.3
         run: |
           curl --fail --location --output godot.zip \

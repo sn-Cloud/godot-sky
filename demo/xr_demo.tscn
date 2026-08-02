@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3]
 
-[ext_resource type="PackedScene" path="res://addons/quest_sky/quest_sky.tscn" id="1_sky"]
+[ext_resource type="PackedScene" path="res://addons/vrsky/vrsky.tscn" id="1_sky"]
 [ext_resource type="Script" path="res://demo/xr_demo.gd" id="2_script"]
 
 [sub_resource type="PlaneMesh" id="Plane_ground"]
@@ -20,7 +20,7 @@ roughness = 0.85
 [node name="XRDemo" type="Node3D"]
 script = ExtResource("2_script")
 
-[node name="QuestSky" parent="." instance=ExtResource("1_sky")]
+[node name="VRSky" parent="." instance=ExtResource("1_sky")]
 sync_system_clock = true
 
 [node name="Ground" type="MeshInstance3D" parent="."]

@@ -1,6 +1,6 @@
 [gd_scene load_steps=8 format=3]
 
-[ext_resource type="PackedScene" path="res://addons/quest_sky/quest_sky.tscn" id="1_sky"]
+[ext_resource type="PackedScene" path="res://addons/vrsky/vrsky.tscn" id="1_sky"]
 [ext_resource type="Script" path="res://demo/demo.gd" id="2_demo"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
@@ -27,7 +27,7 @@ corner_radius_bottom_left = 8
 [node name="Demo" type="Node3D"]
 script = ExtResource("2_demo")
 
-[node name="QuestSky" parent="." instance=ExtResource("1_sky")]
+[node name="VRSky" parent="." instance=ExtResource("1_sky")]
 sync_system_clock = false
 manual_time_minutes = 720.0
 
@@ -60,7 +60,7 @@ theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="UI/Panel/VBox"]
 layout_mode = 2
-text = "Quest Sky — 24-Hour Preview"
+text = "VRSky — 24-Hour Preview"
 
 [node name="TimeLabel" type="Label" parent="UI/Panel/VBox"]
 layout_mode = 2

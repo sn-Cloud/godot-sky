@@ -1,9 +1,9 @@
 .godot/
 target/
 native/target/
-addons/quest_sky/bin/
+addons/vrsky/bin/
 godot/bin/
-godot/quest_sky.gdextension
+godot/vrsky.gdextension
 bin/*.dll
 bin/*.so
 bin/*.dylib

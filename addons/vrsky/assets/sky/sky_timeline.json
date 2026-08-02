@@ -3,7 +3,7 @@
   "frames": [
     {
       "minute": 0,
-      "texture": "res://addons/quest_sky/assets/sky/sky_0000.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_0000.png",
       "cloud_phase": 0.0,
       "ambient_color": [0.24, 0.28, 0.42],
       "ambient_energy": 0.38,
@@ -13,7 +13,7 @@
     },
     {
       "minute": 300,
-      "texture": "res://addons/quest_sky/assets/sky/sky_0500.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_0500.png",
       "cloud_phase": 0.2083333333,
       "ambient_color": [0.26, 0.29, 0.42],
       "ambient_energy": 0.38,
@@ -23,7 +23,7 @@
     },
     {
       "minute": 360,
-      "texture": "res://addons/quest_sky/assets/sky/sky_0600.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_0600.png",
       "cloud_phase": 0.25,
       "ambient_color": [0.16, 0.105, 0.11],
       "ambient_energy": 0.16,
@@ -33,7 +33,7 @@
     },
     {
       "minute": 480,
-      "texture": "res://addons/quest_sky/assets/sky/sky_0800.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_0800.png",
       "cloud_phase": 0.3333333333,
       "ambient_color": [0.27, 0.33, 0.42],
       "ambient_energy": 0.42,
@@ -43,7 +43,7 @@
     },
     {
       "minute": 720,
-      "texture": "res://addons/quest_sky/assets/sky/sky_1200.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_1200.png",
       "cloud_phase": 0.5,
       "ambient_color": [0.5, 0.6, 0.72],
       "ambient_energy": 0.72,
@@ -53,7 +53,7 @@
     },
     {
       "minute": 1020,
-      "texture": "res://addons/quest_sky/assets/sky/sky_1700.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_1700.png",
       "cloud_phase": 0.7083333333,
       "ambient_color": [0.21, 0.2, 0.24],
       "ambient_energy": 0.28,
@@ -63,7 +63,7 @@
     },
     {
       "minute": 1140,
-      "texture": "res://addons/quest_sky/assets/sky/sky_1900.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_1900.png",
       "cloud_phase": 0.7916666667,
       "ambient_color": [0.26, 0.2, 0.28],
       "ambient_energy": 0.32,
@@ -73,7 +73,7 @@
     },
     {
       "minute": 1260,
-      "texture": "res://addons/quest_sky/assets/sky/sky_2100.png",
+      "texture": "res://addons/vrsky/assets/sky/sky_2100.png",
       "cloud_phase": 0.875,
       "ambient_color": [0.24, 0.28, 0.42],
       "ambient_energy": 0.38,

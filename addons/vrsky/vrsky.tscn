@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3]
 
-[ext_resource type="Shader" path="res://addons/quest_sky/shaders/quest_sky_environment.gdshader" id="2_environment_shader"]
+[ext_resource type="Shader" path="res://addons/vrsky/shaders/vrsky_environment.gdshader" id="2_environment_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_environment_sky"]
 resource_local_to_scene = true
@@ -22,12 +22,12 @@ ambient_light_energy = 0.2
 ambient_light_sky_contribution = 0.75
 reflected_light_source = 0
 
-[node name="QuestSky" type="QuestSkyController"]
+[node name="VRSky" type="VrSkyController"]
 sync_system_clock = true
 manual_time_minutes = 720.0
 update_interval_seconds = 60.0
 sun_azimuth_offset_degrees = -25.0
-timeline_path = "res://addons/quest_sky/assets/sky/sky_timeline.json"
+timeline_path = "res://addons/vrsky/assets/sky/sky_timeline.json"
 
 [node name="SunLight" type="DirectionalLight3D" parent="."]
 light_color = Color(1, 0.95, 0.88, 1)

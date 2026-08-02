@@ -1,4 +1,4 @@
-"""Convert directly rendered Sky3D cubemap faces into 2:1 panorama PNGs."""
+"""把 Sky3D 直接渲染的立方体六面转换为 VRSky 使用的 2:1 经纬度 PNG。"""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 
+# 每个立方体面记录前、右、上三个正交方向。顺序必须与捕获脚本的相机朝向一致，
+# 否则转换后的全景会出现镜像、旋转或面边界错接。
 FACE_BASIS = {
     "px": ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0), (0.0, 1.0, 0.0)),
     "nx": ((-1.0, 0.0, 0.0), (0.0, 0.0, -1.0), (0.0, 1.0, 0.0)),
@@ -31,6 +33,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_faces(frame_dir: Path) -> dict[str, np.ndarray]:
+    """读取同一关键帧的六个面，并在进入大数组计算前验证尺寸一致且为正方形。"""
     faces: dict[str, np.ndarray] = {}
     expected_size: tuple[int, int] | None = None
     for name in FACE_BASIS:
@@ -46,6 +49,7 @@ def load_faces(frame_dir: Path) -> dict[str, np.ndarray]:
 
 
 def bilinear_sample(face: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """对单个立方体面执行向量化双线性采样，边缘坐标钳制在有效像素内。"""
     size = face.shape[0]
     x = np.clip(x, 0.0, size - 1.0)
     y = np.clip(y, 0.0, size - 1.0)
@@ -61,6 +65,7 @@ def bilinear_sample(face: np.ndarray, x: np.ndarray, y: np.ndarray) -> np.ndarra
 
 
 def convert_frame(faces: dict[str, np.ndarray], width: int) -> Image.Image:
+    """把一个立方体关键帧投影为宽高比 2:1 的经纬度全景图。"""
     if width < 512 or width % 2:
         raise ValueError("width must be an even integer of at least 512")
     height = width // 2
@@ -69,6 +74,7 @@ def convert_frame(faces: dict[str, np.ndarray], width: int) -> Image.Image:
     longitude = (np.arange(width, dtype=np.float32) + 0.5) / width
     longitude = (longitude * 2.0 - 1.0) * np.pi
 
+    # 分块处理纬度行，限制 7096×3548 输出时方向向量和中间浮点数组的峰值内存。
     chunk_rows = 128
     for row_start in range(0, height, chunk_rows):
         row_end = min(row_start + chunk_rows, height)
@@ -80,6 +86,7 @@ def convert_frame(faces: dict[str, np.ndarray], width: int) -> Image.Image:
         directions[..., 1] = np.sin(latitude)[:, None]
         directions[..., 2] = cos_lat * np.sin(longitude)[None, :]
 
+        # 绝对值最大的方向分量决定命中的立方体轴，符号再区分正面和负面。
         major_axis = np.argmax(np.abs(directions), axis=2)
         positive = np.take_along_axis(directions, major_axis[..., None], axis=2)[..., 0] >= 0.0
         face_indices = major_axis * 2 + (~positive)
@@ -102,15 +109,14 @@ def convert_frame(faces: dict[str, np.ndarray], width: int) -> Image.Image:
         output[row_start:row_end] = np.clip(chunk + 0.5, 0, 255).astype(np.uint8)
 
     panorama = Image.fromarray(output, mode="RGB")
-    # Direct sky rendering preserves the cloud signal but it remains naturally
-    # soft. A restrained final-resolution unsharp mask restores local contrast
-    # without inventing halos around the horizon or cubemap edges.
+    # 天空直接渲染保留了云层信号，但经纬度重采样会自然变软。最终分辨率上使用克制的
+    # 反锐化遮罩恢复局部对比度，同时避免在地平线或立方体面边缘制造明显光晕。
     return panorama.filter(ImageFilter.UnsharpMask(radius=1.4, percent=135, threshold=3))
 
 
 def replace_with_retry(staging_path: Path, output_path: Path) -> None:
-    # Godot's importer and Windows security scanners may briefly hold a PNG
-    # after it is written. Retry the atomic same-volume rename before failing.
+    # Godot 导入器和 Windows 安全扫描器可能短暂占用刚写入的 PNG。先写暂存文件，
+    # 再重试同卷原子替换，确保失败时不会留下半写入的正式天空资源。
     for attempt in range(10):
         try:
             os.replace(staging_path, output_path)
@@ -125,6 +131,7 @@ def main() -> None:
     args = parse_args()
     minutes = [int(value) for value in args.minutes.split(",") if value]
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    # 所有帧先成功写入独立暂存文件，再统一替换正式资源，降低半套时间轴被更新的风险。
     staged: list[tuple[Path, Path]] = []
     for minute in minutes:
         faces = load_faces(args.input_dir / f"{minute:04d}")

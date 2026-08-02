@@ -1,11 +1,17 @@
 use std::f64::consts::TAU;
 
+// 全部时间计算统一使用“当天零点后的分钟数”，避免小时、秒和归一化相位混用。
 pub const MINUTES_PER_DAY: f64 = 1440.0;
 
+/// 把任意分钟数环绕到单日范围。rem_euclid 能正确处理负数，`%` 不能。
 pub fn normalize_minutes(minutes: f64) -> f64 {
     minutes.rem_euclid(MINUTES_PER_DAY)
 }
 
+/// 计算世界空间中的太阳方向。
+///
+/// 6:00 位于地平线、12:00 接近天顶、18:00 再次落到地平线；
+/// 方位偏移只绕 Y 轴旋转轨迹，不改变太阳高度随时间的变化。
 pub fn sun_direction(minutes: f64, azimuth_offset_radians: f64) -> [f64; 3] {
     let phase = TAU * (normalize_minutes(minutes) / MINUTES_PER_DAY - 0.25);
     let x = phase.cos();
@@ -17,6 +23,10 @@ pub fn sun_direction(minutes: f64, azimuth_offset_radians: f64) -> [f64; 3] {
     normalize3([x * cos_a + z * sin_a, y, -x * sin_a + z * cos_a])
 }
 
+/// 计算两张关键帧贴图共同使用的经度采样偏移。
+///
+/// 两端都对齐到同一个插值后相位，再由 Shader 混合颜色。这样云层不会因为
+/// 两张离线贴图各自携带不同相位而出现双影；跨午夜时先展开后一帧以保持连续。
 pub fn cloud_sample_offsets(
     phase_a: f64,
     phase_b: f64,

@@ -1,9 +1,9 @@
-; Engine configuration file.
-; Quest Sky targets Godot 4.6 and the Mobile renderer for standalone XR.
+; Godot 工程配置文件。
+; VRSky 面向 Godot 4.6，并以 Mobile 渲染器作为独立 XR 的唯一验证基线。
 config_version=5
 
 [application]
-config/name="Quest Sky"
+config/name="VRSky"
 config/version="0.3.0"
 config/features=PackedStringArray("4.6", "Mobile")
 run/main_scene="res://demo/launcher.tscn"

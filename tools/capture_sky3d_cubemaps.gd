@@ -1,14 +1,14 @@
 extends SceneTree
 
-## Directly renders Sky3D into six high-resolution camera faces per keyframe.
-## This deliberately avoids RenderingServer.sky_bake_panorama(), whose detail
-## is capped by Sky.radiance_size.
+## 为每个关键时间点把 Sky3D 直接渲染成六张高分辨率立方体面。
+## 这里有意绕过 RenderingServer.sky_bake_panorama()，因为后者的细节上限
+## 会受到 Sky.radiance_size 限制，无法满足 VRSky 离线全景贴图的清晰度要求。
 
 const DEFAULT_OUTPUT_DIR: String = "F:/3rdLib/godot-sky/.sky3d-cubemaps"
 const DEFAULT_FACE_SIZE: int = 2048
 const SKY3D_DEMO_SCENE: String = "res://demo/Sky3DDemo.tscn"
 const SOURCE_SHADER_PATH: String = "res://addons/sky_3d/shaders/SkyMaterial.gdshader"
-const CAPTURE_SHADER_PATH: String = "user://quest_sky_direct_capture.gdshader"
+const CAPTURE_SHADER_PATH: String = "user://vrsky_direct_capture.gdshader"
 const DEFAULT_FRAME_MINUTES: Array[int] = [0, 300, 360, 480, 720, 1020, 1140, 1260]
 const FACE_SET: Array[Dictionary] = [
 	{"name": "px", "direction": Vector3.RIGHT, "up": Vector3.UP},
@@ -25,12 +25,15 @@ var frame_minutes: Array[int] = DEFAULT_FRAME_MINUTES.duplicate()
 
 
 func _initialize() -> void:
+	# SceneTree 脚本没有普通场景的 ready 生命周期；参数校验成功后延迟一帧，
+	# 确保根窗口和 RenderingServer 已准备好，再开始创建离屏视口。
 	if not _parse_arguments():
 		return
 	call_deferred("_capture_all")
 
 
 func _parse_arguments() -> bool:
+	# 只接受明确列出的离线工具参数。未知参数立即失败，避免拼写错误后把大图写入默认目录。
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	var index: int = 0
 	while index < args.size():
@@ -79,8 +82,8 @@ func _capture_all() -> void:
 		_fail("cannot load %s" % SKY3D_DEMO_SCENE)
 		return
 
-	# Extract only the Sky3D environment hierarchy from the demo. Geometry and
-	# demo cameras must never appear in the offline cubemap.
+	# 只从演示场景抽取 Sky3D 环境层级。演示几何体和相机绝不能进入离线立方体贴图，
+	# 否则它们会被永久烘焙进 VRSky 的无穷远背景。
 	var demo_scene: Node = packed_scene.instantiate()
 	var sky3d: Variant = demo_scene.get_node_or_null("Sky3D")
 	if sky3d == null:
@@ -90,6 +93,7 @@ func _capture_all() -> void:
 	demo_scene.free()
 
 	var viewport: SubViewport = SubViewport.new()
+	# 独立 World3D 隔离外部场景状态；90° 相机配合六个轴向恰好覆盖完整球面。
 	viewport.name = "SkyCaptureViewport"
 	viewport.size = Vector2i(face_size, face_size)
 	viewport.own_world_3d = true
@@ -127,7 +131,8 @@ func _capture_all() -> void:
 	if material == null or not _install_high_quality_capture_shader(material):
 		return
 
-	# Celestial bodies remain dynamic in Quest Sky and must not be baked.
+	# 太阳和月亮由 VRSky 运行时按设备时间连续移动，不能烘焙进任何关键帧。
+	# 同时关闭辅助网格，确保输出只包含大气、星空和云层本身。
 	sky_dome.sun_disk_intensity = 0.0
 	sky_dome.moon_size = 0.0
 	sky_dome.atm_sun_mie_intensity = 0.0
@@ -136,6 +141,7 @@ func _capture_all() -> void:
 	material.set_shader_parameter("show_equatorial_grid", false)
 
 	for minute: int in frame_minutes:
+		# 每次修改 Sky3D 时间后等待两帧，使 tool 脚本、材质参数和离屏渲染全部收敛。
 		time_of_day.set_time(minute / 60, minute % 60, 0)
 		_apply_capture_look(material, minute)
 		await process_frame
@@ -147,6 +153,7 @@ func _capture_all() -> void:
 			return
 
 		for face: Dictionary in FACE_SET:
+			# 每个面再次等待两帧并强制同步，防止读取到上一相机方向的 GPU 结果。
 			camera.look_at(face["direction"], face["up"])
 			await process_frame
 			await process_frame
@@ -169,6 +176,8 @@ func _capture_all() -> void:
 
 
 func _install_high_quality_capture_shader(material: ShaderMaterial) -> bool:
+	# 捕获 Shader 从 Sky3D 原始源码派生，但只存在于 user:// 临时目录，
+	# 不修改第三方插件，也不让离线专用采样成本进入目标项目运行时。
 	var source: String = FileAccess.get_file_as_string(SOURCE_SHADER_PATH)
 	if source.is_empty():
 		return _fail("cannot read %s" % SOURCE_SHADER_PATH)
@@ -197,6 +206,8 @@ func _install_high_quality_capture_shader(material: ShaderMaterial) -> bool:
 	if not source.contains(original_fbm_tail):
 		return _fail("Sky3D cumulus FBM layout changed")
 	source = source.replace(original_fbm_tail, capture_fbm_tail)
+	# 下列英文注释属于待匹配的 Sky3D 上游 Shader 原文，不是本工具自身注释；
+	# 保留它们才能在上游结构变化时可靠地拒绝生成错误资源。
 	var celestial_block: String = """// Sun
 	vec3 sun_disk = calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb;
 	sun_disk *= sun_disk_intensity;
@@ -210,7 +221,7 @@ func _install_high_quality_capture_shader(material: ShaderMaterial) -> bool:
 	vec3 moon_tex = sample_moon_texture(moon_normal);
 	vec3 moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
 	float moonMask = (1.0 - moon_mask);"""
-	var hidden_celestial_block: String = """// Celestial disks are intentionally omitted from offline captures.
+	var hidden_celestial_block: String = """// 离线天空贴图有意排除天体圆盘，交由 VRSky 运行时绘制。
 	vec3 sun_disk = vec3(0.0);
 	vec3 moon_output = vec3(0.0);
 	float moonMask = 1.0;"""
@@ -232,6 +243,8 @@ func _install_high_quality_capture_shader(material: ShaderMaterial) -> bool:
 
 
 func _apply_capture_look(material: ShaderMaterial, minute: int) -> void:
+	# 曝光只服务于离线贴图动态范围：白天压高光，夜间保留星空和云层暗部。
+	# 运行时仍由时间轴控制环境光与天体能量，不在这里烘焙光照强度逻辑。
 	var tonemap_level: float
 	var exposure: float
 	if minute >= 420 and minute <= 960:
